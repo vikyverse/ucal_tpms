@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">UCAL TPMS</string>
+    <string name="start_scan">Start Scan</string>
+    <string name="scanned_devices">Scanned Devices</string>
+    <string name="ble_permission_rationale">This app needs to access bluetooth and location in order to scan for BLE devices.</string>
+    <string name="ble_permissions_denied_message">Some permissions were not granted, please grant them and try again</string>
 </resources>
