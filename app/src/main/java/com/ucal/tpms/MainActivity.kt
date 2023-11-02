@@ -11,6 +11,7 @@ import android.widget.Button
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.util.containsKey
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lorenzofelletti.permissions.BuildConfig.DEBUG
@@ -72,12 +73,29 @@ class MainActivity : AppCompatActivity() {
         btManager = getSystemService(BluetoothManager::class.java)
         bleScanManager = BleScanManager(btManager, 5000, scanCallback = BleScanCallback({
             val name = it?.device?.name
-            if (name != null) {
-                Log.d("Info", name)
+            val address = it?.device?.address
+            var pressure = ""
+            var temperature = ""
+            val manufacturerData = it?.scanRecord?.manufacturerSpecificData
+            var hexData = ""
+            if (manufacturerData != null) {
+                // Replace 0xFFFF with the actual manufacturer ID you want to filter by
+                val manufacturerId = 0xFFFF
+                if (manufacturerData.containsKey(manufacturerId)) {
+                    val data = manufacturerData[manufacturerId]
+                    for (b in data){
+                        val st = String.format("%02X", b)
+                        hexData += st
+                    }
+                    val sensorData: List<String> = hexToString(hexData).split('|')
+                    pressure = sensorData[1]+" psi"
+                    temperature = sensorData[3]+"°C"
+                }
             }
-            if (name.isNullOrBlank()) return@BleScanCallback
 
-            val device = BleDevice(name)
+            if (name.isNullOrBlank() || address.isNullOrBlank()) return@BleScanCallback
+
+            val device = BleDevice(name, address, pressure, temperature)
             if (!foundDevices.contains(device)) {
                 if (DEBUG) {
                     Log.d(
@@ -128,5 +146,15 @@ class MainActivity : AppCompatActivity() {
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.BLUETOOTH_ADMIN,
         )
+    }
+
+    private fun hexToString(hex: String): String {
+        val stringBuilder = StringBuilder()
+        for (i in hex.indices step 2) {
+            val hexByte = hex.substring(i, i + 2)
+            val intValue = hexByte.toInt(16)
+            stringBuilder.append(intValue.toChar())
+        }
+        return stringBuilder.toString()
     }
 }

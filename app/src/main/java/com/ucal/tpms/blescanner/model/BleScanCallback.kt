@@ -1,5 +1,6 @@
 package com.ucal.tpms.blescanner.model
 
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.util.Log

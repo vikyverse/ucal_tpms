@@ -11,6 +11,9 @@ import com.ucal.tpms.blescanner.model.BleDevice
 class BleDeviceAdapter(private val devices: List<BleDevice>) : RecyclerView.Adapter<BleDeviceAdapter.ViewHolder>() {
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val deviceNameTextView: TextView = itemView.findViewById(R.id.device_name)
+        val deviceAddressTextView: TextView = itemView.findViewById(R.id.device_address)
+        val devicePressureTextView: TextView = itemView.findViewById(R.id.tyrePressure)
+        val deviceTemperatureTextView: TextView = itemView.findViewById(R.id.tyreTemp)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -22,8 +25,14 @@ class BleDeviceAdapter(private val devices: List<BleDevice>) : RecyclerView.Adap
 
     override fun onBindViewHolder(holder: BleDeviceAdapter.ViewHolder, position: Int) {
         val device = devices[position]
-        val textView = holder.deviceNameTextView
-        textView.text = device.name
+        val textViewName = holder.deviceNameTextView
+        val textViewAddress = holder.deviceAddressTextView
+        val textViewPressure = holder.devicePressureTextView
+        val textViewTemperature = holder.deviceTemperatureTextView
+        textViewName.text = device.name
+        textViewAddress.text = device.address
+        textViewPressure.text = device.pressure
+        textViewTemperature.text = device.temperature
     }
 
     override fun getItemCount(): Int {

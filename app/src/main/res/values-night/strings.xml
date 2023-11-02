@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="start_scan">Start Scan</string>
+    <string name="pressure">Pressure: </string>
+    <string name="temperature">Temperature: </string>
 </resources>
