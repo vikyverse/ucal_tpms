@@ -6,11 +6,13 @@ import android.bluetooth.BluetoothManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.util.SparseArray
 import android.view.View
 import android.widget.Button
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.util.size
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lorenzofelletti.permissions.PermissionManager
@@ -24,6 +26,7 @@ import com.ucal.tpms.blescanner.adapter.BleDeviceAdapter
 import com.ucal.tpms.blescanner.model.BleDevice
 import com.ucal.tpms.blescanner.model.BleScanCallback
 import com.ucal.tpms.databinding.ActivityMainBinding
+import java.nio.charset.Charset
 
 class MainActivity : AppCompatActivity() {
 
@@ -69,21 +72,29 @@ class MainActivity : AppCompatActivity() {
 
         // BleManager creation
         btManager = getSystemService(BluetoothManager::class.java)
-        bleScanManager = BleScanManager(btManager, 5000, scanCallback = BleScanCallback({
+        bleScanManager = BleScanManager(btManager, 5000, scanCallback = BleScanCallback({ it ->
             val name = it?.device?.name
             val address = it?.device?.address
             var pressure = ""
             var temperature = ""
 
-            val advertisementData: ByteArray? = it?.scanRecord?.bytes
-            val stringBuilder: StringBuilder? = advertisementData?.let { it1 -> StringBuilder(it1.size) }
+            val advertisementData: SparseArray<ByteArray>? = it?.scanRecord?.manufacturerSpecificData
+
             if (advertisementData != null) {
-                for (byteChar in advertisementData) {
-                    stringBuilder!!.append(Char(byteChar.toUShort()))
+                val manufacturerId = 0X7C50 // Replace with the actual manufacturer ID
+                val manufacturerData = advertisementData.get(manufacturerId)
+
+                if (manufacturerData != null) {
+                    val advData = manufacturerData.joinToString(separator = "") {
+                        String.format("%02X", it)
+                    }
+                    // If you want to convert the hexadecimal data to a human-readable string:
+                    val advDataText = String(manufacturerData, Charset.forName("ASCII"))
+                    val sensorValue = advDataText.split("|")
+                    pressure = sensorValue[0]
+                    temperature = sensorValue[2]
                 }
             }
-            val advData = stringBuilder.toString()
-            Log.d("MSD", advData)
 
             if (name.isNullOrBlank() || address.isNullOrBlank()) return@BleScanCallback
 
