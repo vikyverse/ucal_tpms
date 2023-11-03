@@ -11,10 +11,8 @@ import android.widget.Button
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.util.containsKey
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.lorenzofelletti.permissions.BuildConfig.DEBUG
 import com.lorenzofelletti.permissions.PermissionManager
 import com.lorenzofelletti.permissions.dispatcher.dsl.checkPermissions
 import com.lorenzofelletti.permissions.dispatcher.dsl.doOnDenied
@@ -76,33 +74,21 @@ class MainActivity : AppCompatActivity() {
             val address = it?.device?.address
             var pressure = ""
             var temperature = ""
-            val manufacturerData = it?.scanRecord?.manufacturerSpecificData
-            var hexData = ""
-            if (manufacturerData != null) {
-                // Replace 0xFFFF with the actual manufacturer ID you want to filter by
-                val manufacturerId = 0xFFFF
-                if (manufacturerData.containsKey(manufacturerId)) {
-                    val data = manufacturerData[manufacturerId]
-                    for (b in data){
-                        val st = String.format("%02X", b)
-                        hexData += st
-                    }
-                    val sensorData: List<String> = hexToString(hexData).split('|')
-                    pressure = sensorData[1]+" psi"
-                    temperature = sensorData[3]+"°C"
+
+            val advertisementData: ByteArray? = it?.scanRecord?.bytes
+            val stringBuilder: StringBuilder? = advertisementData?.let { it1 -> StringBuilder(it1.size) }
+            if (advertisementData != null) {
+                for (byteChar in advertisementData) {
+                    stringBuilder!!.append(Char(byteChar.toUShort()))
                 }
             }
+            val advData = stringBuilder.toString()
+            Log.d("MSD", advData)
 
             if (name.isNullOrBlank() || address.isNullOrBlank()) return@BleScanCallback
 
             val device = BleDevice(name, address, pressure, temperature)
             if (!foundDevices.contains(device)) {
-                if (DEBUG) {
-                    Log.d(
-                        BleScanCallback::class.java.simpleName,
-                        "${this.javaClass.enclosingMethod?.name} - Found device: $name"
-                    )
-                }
                 foundDevices.add(device)
                 adapter.notifyItemInserted(foundDevices.size - 1)
             }
@@ -121,8 +107,6 @@ class MainActivity : AppCompatActivity() {
         // Adding the onclick listener to the start scan button
         btnStartScan = findViewById(R.id.btnStartScan)
         btnStartScan.setOnClickListener {
-            if (DEBUG) Log.i(TAG, "${it.javaClass.simpleName}:${it.id} - onClick event")
-
             // Checks if the required permissions are granted and starts the scan if so, otherwise it requests them
             permissionManager checkRequestAndDispatch BLE_PERMISSION_REQUEST_CODE
         }
@@ -135,7 +119,6 @@ class MainActivity : AppCompatActivity() {
         permissionManager.dispatchOnRequestPermissionsResult(requestCode, grantResults)
     }
     companion object {
-        private val TAG = MainActivity::class.java.simpleName
 
         private const val BLE_PERMISSION_REQUEST_CODE = 1
         @RequiresApi(Build.VERSION_CODES.S)
@@ -148,13 +131,4 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun hexToString(hex: String): String {
-        val stringBuilder = StringBuilder()
-        for (i in hex.indices step 2) {
-            val hexByte = hex.substring(i, i + 2)
-            val intValue = hexByte.toInt(16)
-            stringBuilder.append(intValue.toChar())
-        }
-        return stringBuilder.toString()
-    }
 }
