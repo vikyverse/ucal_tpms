@@ -14,6 +14,8 @@ class BleDeviceAdapter(private val devices: List<BleDevice>) : RecyclerView.Adap
         val deviceAddressTextView: TextView = itemView.findViewById(R.id.device_address)
         val devicePressureTextView: TextView = itemView.findViewById(R.id.tyrePressure)
         val deviceTemperatureTextView: TextView = itemView.findViewById(R.id.tyreTemp)
+        val deviceAccelerometerTextView: TextView = itemView.findViewById(R.id.accelerometer)
+        val deviceBatteryPercentageTextView: TextView = itemView.findViewById(R.id.battery)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -29,10 +31,14 @@ class BleDeviceAdapter(private val devices: List<BleDevice>) : RecyclerView.Adap
         val textViewAddress = holder.deviceAddressTextView
         val textViewPressure = holder.devicePressureTextView
         val textViewTemperature = holder.deviceTemperatureTextView
+        val textViewAccelerometer = holder.deviceAccelerometerTextView
+        val textViewBattery = holder.deviceBatteryPercentageTextView
         textViewName.text = device.name
         textViewAddress.text = device.address
         textViewPressure.text = device.pressure
         textViewTemperature.text = device.temperature
+        textViewAccelerometer.text = device.accelerometer
+        textViewBattery.text = device.batteryPercentage
     }
 
     override fun getItemCount(): Int {

@@ -4,7 +4,9 @@ data class BleDevice(
     val name: String,
     val address: String,
     val pressure: String,
-    val temperature: String
+    val temperature: String,
+    val accelerometer: String,
+    val batteryPercentage: String
 ) {
     companion object {
         fun createBleDevicesList(): MutableList<BleDevice> {

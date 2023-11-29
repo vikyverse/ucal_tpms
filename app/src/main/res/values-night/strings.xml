@@ -3,4 +3,6 @@
     <string name="start_scan">Start Scan</string>
     <string name="pressure">Pressure: </string>
     <string name="temperature">Temperature: </string>
+    <string name="accelerometer">Accelerometer: </string>
+    <string name="battery">Battery: </string>
 </resources>

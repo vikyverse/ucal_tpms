@@ -11,7 +11,6 @@ import android.widget.Button
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.util.size
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lorenzofelletti.permissions.PermissionManager
@@ -46,6 +45,7 @@ class MainActivity : AppCompatActivity() {
         private const val BLE_PERMISSION_REQUEST_CODE = 1
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     private val blePermissions = arrayOf(
         Manifest.permission.BLUETOOTH_SCAN,
         Manifest.permission.BLUETOOTH_CONNECT,
@@ -88,7 +88,7 @@ class MainActivity : AppCompatActivity() {
         btManager = getSystemService(BluetoothManager::class.java)
 
         // Define the target MAC address you want to scan for
-        val targetMacAddress = "80:EA:CA:70:00:03" // Replace with your desired MAC address
+        val targetMacAddress = "48:23:35:03:4F:3C" // Replace with your desired MAC address
 
         bleScanManager = BleScanManager(btManager, 5000, scanCallback = BleScanCallback({ it ->
             val name = it?.device?.name
@@ -96,6 +96,7 @@ class MainActivity : AppCompatActivity() {
             var pressure = ""
             var temperature = ""
             var accelerometer = ""
+            var batteryPercentage = ""
 
             // Check if the discovered device's MAC address matches the target MAC address
             if (address != null && address == targetMacAddress) {
@@ -112,15 +113,21 @@ class MainActivity : AppCompatActivity() {
                         // If you want to convert the hexadecimal data to a human-readable string:
                         val advDataText = String(manufacturerData, Charset.forName("ASCII"))
                         val sensorValue = advDataText.split("|")
-                        pressure = sensorValue[0]
-                        temperature = sensorValue[2]
-                        accelerometer = sensorValue[3]
+
+                        if (sensorValue.size >= 4) {
+                            pressure = sensorValue[0]
+                            temperature = sensorValue[2]
+                            accelerometer = sensorValue[4]
+                            batteryPercentage = sensorValue[5]
+                        }
                     }
                 }
 
-                if (name.isNullOrBlank() || address.isNullOrBlank()) return@BleScanCallback
+                if (name.isNullOrBlank() || address.isNullOrBlank()) {
+                    return@BleScanCallback
+                }
 
-                val device = BleDevice(name, address, pressure, temperature)
+                val device = BleDevice(name, address, pressure, temperature, accelerometer, batteryPercentage)
                 if (!foundDevices.contains(device)) {
                     foundDevices.add(device)
                     adapter.notifyItemInserted(foundDevices.size - 1)

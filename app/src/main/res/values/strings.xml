@@ -6,4 +6,10 @@
     <string name="ble_permissions_denied_message">Some permissions were not granted, please grant them and try again</string>
     <string name="pressure">Pressure: </string>
     <string name="temperature">Temperature: </string>
+    <string name="accelerometer">Accelerometer: </string>
+    <string name="battery">Battery: </string>
+    <string name="v">V</string>
+    <string name="g">g</string>
+    <string name="c">°C</string>
+    <string name="psi">PSi</string>
 </resources>
