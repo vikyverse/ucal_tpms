@@ -5,7 +5,6 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.util.SparseArray
 import android.view.View
 import android.widget.Button
@@ -40,6 +39,21 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var foundDevices: MutableList<BleDevice>
 
+    private val handler = android.os.Handler()
+    private val scanIntervalMillis: Long = 3000 // 3 seconds
+
+    companion object {
+        private const val BLE_PERMISSION_REQUEST_CODE = 1
+    }
+
+    private val blePermissions = arrayOf(
+        Manifest.permission.BLUETOOTH_SCAN,
+        Manifest.permission.BLUETOOTH_CONNECT,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.BLUETOOTH_ADMIN
+    )
+
     @SuppressLint("MissingPermission")
     @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,36 +86,45 @@ class MainActivity : AppCompatActivity() {
 
         // BleManager creation
         btManager = getSystemService(BluetoothManager::class.java)
+
+        // Define the target MAC address you want to scan for
+        val targetMacAddress = "80:EA:CA:70:00:03" // Replace with your desired MAC address
+
         bleScanManager = BleScanManager(btManager, 5000, scanCallback = BleScanCallback({ it ->
             val name = it?.device?.name
             val address = it?.device?.address
             var pressure = ""
             var temperature = ""
+            var accelerometer = ""
 
-            val advertisementData: SparseArray<ByteArray>? = it?.scanRecord?.manufacturerSpecificData
+            // Check if the discovered device's MAC address matches the target MAC address
+            if (address != null && address == targetMacAddress) {
+                val advertisementData: SparseArray<ByteArray>? = it?.scanRecord?.manufacturerSpecificData
 
-            if (advertisementData != null) {
-                val manufacturerId = 0X7C50 // Replace with the actual manufacturer ID
-                val manufacturerData = advertisementData.get(manufacturerId)
+                if (advertisementData != null) {
+                    val manufacturerId = 0X7C50 // Replace with the actual manufacturer ID
+                    val manufacturerData = advertisementData.get(manufacturerId)
 
-                if (manufacturerData != null) {
-                    val advData = manufacturerData.joinToString(separator = "") {
-                        String.format("%02X", it)
+                    if (manufacturerData != null) {
+                        val advData = manufacturerData.joinToString(separator = "") {
+                            String.format("%02X", it)
+                        }
+                        // If you want to convert the hexadecimal data to a human-readable string:
+                        val advDataText = String(manufacturerData, Charset.forName("ASCII"))
+                        val sensorValue = advDataText.split("|")
+                        pressure = sensorValue[0]
+                        temperature = sensorValue[2]
+                        accelerometer = sensorValue[3]
                     }
-                    // If you want to convert the hexadecimal data to a human-readable string:
-                    val advDataText = String(manufacturerData, Charset.forName("ASCII"))
-                    val sensorValue = advDataText.split("|")
-                    pressure = sensorValue[0]
-                    temperature = sensorValue[2]
                 }
-            }
 
-            if (name.isNullOrBlank() || address.isNullOrBlank()) return@BleScanCallback
+                if (name.isNullOrBlank() || address.isNullOrBlank()) return@BleScanCallback
 
-            val device = BleDevice(name, address, pressure, temperature)
-            if (!foundDevices.contains(device)) {
-                foundDevices.add(device)
-                adapter.notifyItemInserted(foundDevices.size - 1)
+                val device = BleDevice(name, address, pressure, temperature)
+                if (!foundDevices.contains(device)) {
+                    foundDevices.add(device)
+                    adapter.notifyItemInserted(foundDevices.size - 1)
+                }
             }
         }))
 
@@ -121,25 +144,15 @@ class MainActivity : AppCompatActivity() {
             // Checks if the required permissions are granted and starts the scan if so, otherwise it requests them
             permissionManager checkRequestAndDispatch BLE_PERMISSION_REQUEST_CODE
         }
+
+        // Schedule the scan to run every 3 seconds
+        scheduleAutoScan()
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        permissionManager.dispatchOnRequestPermissionsResult(requestCode, grantResults)
+    private fun scheduleAutoScan() {
+        handler.postDelayed({
+            bleScanManager.scanBleDevices()
+            scheduleAutoScan() // Schedule the next scan
+        }, scanIntervalMillis)
     }
-    companion object {
-
-        private const val BLE_PERMISSION_REQUEST_CODE = 1
-        @RequiresApi(Build.VERSION_CODES.S)
-        private val blePermissions = arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.BLUETOOTH_ADMIN,
-        )
-    }
-
 }
