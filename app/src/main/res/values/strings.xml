@@ -12,4 +12,5 @@
     <string name="g">g</string>
     <string name="c">°C</string>
     <string name="psi">PSi</string>
+    <string name="download_log">Download Log</string>
 </resources>

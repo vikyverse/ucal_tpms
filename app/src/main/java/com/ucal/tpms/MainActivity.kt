@@ -2,15 +2,22 @@ package com.ucal.tpms
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.DownloadManager
 import android.bluetooth.BluetoothManager
+import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.util.Log
 import android.util.SparseArray
 import android.view.View
 import android.widget.Button
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
+import androidx.core.util.size
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lorenzofelletti.permissions.PermissionManager
@@ -24,12 +31,22 @@ import com.ucal.tpms.blescanner.adapter.BleDeviceAdapter
 import com.ucal.tpms.blescanner.model.BleDevice
 import com.ucal.tpms.blescanner.model.BleScanCallback
 import com.ucal.tpms.databinding.ActivityMainBinding
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.FileWriter
+import java.io.IOException
 import java.nio.charset.Charset
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.concurrent.thread
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var btnStartScan: Button
+    private lateinit var btnDownloadLog: Button
 
     private lateinit var permissionManager: PermissionManager
 
@@ -39,7 +56,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var foundDevices: MutableList<BleDevice>
 
     private val handler = android.os.Handler()
-    private val scanIntervalMillis: Long = 3000 // 3 seconds
+    private val scanDurationMillis: Long = 50000 // 90 seconds
 
     companion object {
         private const val BLE_PERMISSION_REQUEST_CODE = 1
@@ -114,12 +131,10 @@ class MainActivity : AppCompatActivity() {
                         val advDataText = String(manufacturerData, Charset.forName("ASCII"))
                         val sensorValue = advDataText.split("|")
 
-                        if (sensorValue.size >= 4) {
-                            pressure = sensorValue[0]
-                            temperature = sensorValue[2]
-                            accelerometer = sensorValue[4]
-                            batteryPercentage = sensorValue[5]
-                        }
+                        pressure = sensorValue[0]
+                        temperature = sensorValue[2]
+                        accelerometer = sensorValue[4]
+                        batteryPercentage = sensorValue[5]
                     }
                 }
 
@@ -132,6 +147,9 @@ class MainActivity : AppCompatActivity() {
                     foundDevices.add(device)
                     adapter.notifyItemInserted(foundDevices.size - 1)
                 }
+
+                // Log the data to a text file
+                logData(device)
             }
         }))
 
@@ -148,8 +166,14 @@ class MainActivity : AppCompatActivity() {
         // Adding the onclick listener to the start scan button
         btnStartScan = findViewById(R.id.btnStartScan)
         btnStartScan.setOnClickListener {
-            // Checks if the required permissions are granted and starts the scan if so, otherwise it requests them
+            // Checks if the required permissions are granted and starts the scan if so, otherwise, it requests them
             permissionManager checkRequestAndDispatch BLE_PERMISSION_REQUEST_CODE
+        }
+
+        //Download log
+        btnDownloadLog = findViewById(R.id.btnDownloadLog)
+        btnDownloadLog.setOnClickListener {
+            downloadLog()
         }
 
         // Schedule the scan to run every 3 seconds
@@ -160,6 +184,67 @@ class MainActivity : AppCompatActivity() {
         handler.postDelayed({
             bleScanManager.scanBleDevices()
             scheduleAutoScan() // Schedule the next scan
-        }, scanIntervalMillis)
+        }, scanDurationMillis)
     }
+
+    private fun logData(device: BleDevice) {
+        thread {
+            val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+            val logEntry = "$timestamp: ${device.name}, ${device.address}, ${device.pressure}, ${device.temperature}, ${device.accelerometer}, ${device.batteryPercentage}\n"
+
+            try {
+                val fileName = "ble_scan_data.txt"
+                val file = File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
+
+                FileWriter(file, true).use { writer ->
+                    writer.append(logEntry)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun downloadLog() {
+        val fileName = "ble_scan_data.txt"
+        val file = File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
+
+        if (file.exists()) {
+            try {
+                val input = FileInputStream(file)
+                val outputDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                val outputFile = File(outputDir, fileName)
+                val output = FileOutputStream(outputFile)
+
+                val buffer = ByteArray(1024)
+                var length: Int
+
+                while (input.read(buffer).also { length = it } > 0) {
+                    output.write(buffer, 0, length)
+                }
+
+                output.flush()
+                output.close()
+                input.close()
+
+                Toast.makeText(
+                    this@MainActivity,
+                    "Download completed. Check your Downloads folder.",
+                    Toast.LENGTH_LONG
+                ).show()
+            } catch (e: IOException) {
+                e.printStackTrace()
+                Log.e("DownloadLog", "Error copying file: ${e.message}")
+            }
+        } else {
+            Toast.makeText(
+                this@MainActivity,
+                "File not found. Perform a BLE scan to generate data first.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+
+
 }

@@ -32,8 +32,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/start_scan"
+            app:layout_constraintBottom_toTopOf="@+id/btnDownloadLog"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="1.0"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDownloadLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/download_log"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="1.0"
             app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
